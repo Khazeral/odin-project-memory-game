@@ -2,19 +2,18 @@ import { useEffect, useState } from "react";
 import { PokemonCardType } from "./types/PokemonCard";
 import { TableCard } from "./components/common/TableCards";
 import { shuffleArray } from "./utils/shuffleArray";
-import { Box, Heading, Text, Spinner, VStack, HStack } from "@chakra-ui/react";
+import { Box, Heading, Spinner, VStack } from "@chakra-ui/react";
 
 function App() {
   const [pokemons, setPokemons] = useState<PokemonCardType[]>([]);
-  const [actualScore, setActualScore] = useState<number>(0);
-  const [bestScore, setBestScore] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [pokemonsFound, setPokemonsFound] = useState<number[]>([]);
+  const [flippedCard, setFlippedCard] = useState<PokemonCardType[]>([]);
+  const [canFlip, setCanFlip] = useState(true);
 
   useEffect(() => {
     async function fetchPokemons() {
       const responses = await Promise.all(
-        Array.from({ length: 20 }, (_, i) =>
+        Array.from({ length: 18 }, (_, i) =>
           fetch(`https://pokeapi.co/api/v2/pokemon/${i + 1}`)
         )
       );
@@ -23,30 +22,58 @@ function App() {
 
       const formatted = data.map((poke: any, index: number) => ({
         url: poke.sprites.front_default,
-        keyPair: index
+        keyPair: index,
+        id: index
       }));
 
-      const pokemonsPairs = formatted.concat(formatted);
+      const pokemonsPairs = formatted.flatMap(card => [
+        { ...card, id: card.id, flipped: false },
+        { ...card, id: card.id + 26, flipped: false }
+      ]);
+
       const shuffledPairs = shuffleArray(pokemonsPairs);
 
       setPokemons(shuffledPairs);
-      setIsLoading(false); 
+      setIsLoading(false);
     }
 
     fetchPokemons();
   }, []);
 
-  const onFlipped = (keyPair: number) => {
-    console.log('ok')
-    console.log(keyPair)
-    if(pokemonsFound.includes(keyPair)){
-      setActualScore(prev => prev + 1)
-      if(actualScore > bestScore){
-        setBestScore(prev => prev + 1)
+  const onFlipped = (card: PokemonCardType) => {
+    if (!canFlip || card.flipped) return;
+
+    const updatedPokemons = pokemons.map(p =>
+      p.id === card.id ? { ...p, flipped: true } : p
+    );
+    setPokemons(updatedPokemons);
+
+    const newFlipped = [...flippedCard, card];
+    setFlippedCard(newFlipped);
+
+    if (newFlipped.length === 2) {
+      setCanFlip(false);
+      const [first, second] = newFlipped;
+
+      if (first.keyPair === second.keyPair) {
+        setTimeout(() => {
+          setFlippedCard([]);
+          setCanFlip(true);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          const reset = updatedPokemons.map(p =>
+            p.id === first.id || p.id === second.id
+              ? { ...p, flipped: false }
+              : p
+          );
+          setPokemons(reset);
+          setFlippedCard([]);
+          setCanFlip(true);
+        }, 1000);
       }
     }
-    setPokemonsFound(prev => [...prev, keyPair])
-  }
+  };
 
   return (
     <Box minH="100vh" bgGradient="linear(to-b, yellow.100, orange.100)" p={6}>
@@ -60,29 +87,10 @@ function App() {
           🎮 Memory Pokémon
         </Heading>
 
-        <HStack>
-          <Box textAlign="center">
-            <Text fontSize="md" color="gray.600">
-              Score actuel
-            </Text>
-            <Heading size="lg" color="teal.600">
-              {actualScore}
-            </Heading>
-          </Box>
-          <Box textAlign="center">
-            <Text fontSize="md" color="gray.600">
-              Meilleur score
-            </Text>
-            <Heading size="lg" color="purple.600">
-              {bestScore}
-            </Heading>
-          </Box>
-        </HStack>
-
         {isLoading ? (
           <Spinner size="xl" color="red.400" />
         ) : (
-          <TableCard cards={pokemons} OnFlipped={onFlipped}/>
+          <TableCard cards={pokemons} OnFlipped={onFlipped} />
         )}
       </VStack>
     </Box>

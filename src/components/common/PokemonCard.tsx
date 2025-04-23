@@ -1,6 +1,5 @@
 import { Box, Image } from "@chakra-ui/react";
 import { PokemonCardType } from "../../types/PokemonCard";
-import { useState } from "react";
 import pokeball from "../../asset/pokeball.png";
 
 export const PokemonCard = ({
@@ -8,23 +7,16 @@ export const PokemonCard = ({
   OnFlipped,
 }: {
   card: PokemonCardType;
-  OnFlipped: (keyPair:number) => void;
+  OnFlipped: (card: PokemonCardType) => void;
+  index: number
 }) => {
-  const [isFlip, setIsFlip] = useState(false);
-
-  const handleFlipCard = () => {
-    if (!isFlip) {
-      setIsFlip(true);
-      OnFlipped(card.keyPair);
-    }
-  };
 
   return (
     <Box
       w="120px"
       h="120px"
       perspective="1000px"
-      onClick={isFlip ? undefined : handleFlipCard}
+      onClick={() =>{console.log(!card.flipped);console.log(card); return !card.flipped && OnFlipped(card)} }
       cursor="pointer"
     >
       <Box
@@ -33,7 +25,7 @@ export const PokemonCard = ({
         position="relative"
         transformStyle="preserve-3d"
         transition="transform 0.6s"
-        transform={isFlip ? "rotateY(180deg)" : "rotateY(0deg)"}
+        transform={card.flipped ? "rotateY(180deg)" : "rotateY(0deg)"}
       >
         <Box
           position="absolute"
